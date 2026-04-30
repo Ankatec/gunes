@@ -28,7 +28,11 @@ export default defineConfig(({ command }) => {
   const blogPrerenderRoutes = command === 'build' ? getBlogRoutes() : [];
 
   return {
-    base: './',
+    base: '/gunes/', 
+    build: {
+      outDir: 'dist',
+      assetsDir: 'assets',
+    },
     plugins: [
       viteSourceLocator({
         prefix: 'mgx', // Prefix used to identify source locations; do not change.
