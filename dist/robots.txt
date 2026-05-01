@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://ankatec.github.io/gunes/sitemap.xml
