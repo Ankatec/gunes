@@ -28,11 +28,7 @@ export default defineConfig(({ command }) => {
   const blogPrerenderRoutes = command === 'build' ? getBlogRoutes() : [];
 
   return {
-    base: '/gunes/', 
-    build: {
-      outDir: 'dist',
-      assetsDir: 'assets',
-    },
+    base: '/gunes/',
     plugins: [
       viteSourceLocator({
         prefix: 'mgx', // Prefix used to identify source locations; do not change.
@@ -40,7 +36,7 @@ export default defineConfig(({ command }) => {
       react(),
       atoms(),
       Sitemap({
-        hostname: 'https://atoms.template.com',
+        hostname: 'https://ankatec.github.io/gunes',
         lastmod: getSitemapLastmod(),
         readable: true,
         generateRobotsTxt: true,
