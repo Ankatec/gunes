@@ -1,4 +1,4 @@
-name: Deploy GunesOS
+name: Deploy gunes
 on:
   push:
     branches: ["main"]
