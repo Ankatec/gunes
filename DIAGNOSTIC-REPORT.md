@@ -1,84 +1,108 @@
-# 🔍 GunesOS 404 Hata Teşhis Raporu
+# GunesOS GitHub Pages Dağıtım Tanı Raporu
 
-## 🚨 Tespit Edilen Kritik Sorunlar
+## Tespit Edilen Sorunlar
 
-### 1. GitHub Pages Kaynak Yapılandırması Yanlış (ANA NEDEN)
-Repo'da **iki farklı deploy workflow** çalışıyor:
-- `Deploy GunesOS` → `actions/deploy-pages@v4` kullanıyor (GitHub Actions deploy)
-- `pages-build-deployment` → GitHub'ın otomatik Pages workflow'u (Branch deploy)
+### 1. ❌ `dist/` Klasörü Repoda Mevcut
+- `dist/` klasörü Git tarafından takip ediliyor ve repoya push ediliyor
+- Bu, GitHub Actions deploy ile çakışıyor
+- `.gitignore` dosyası `dist/` klasörünün İÇİNDE (`dist/.gitignore`), kök dizinde değil
 
-`pages-build-deployment` workflow'unun varlığı, GitHub Pages ayarlarının **"Deploy from a branch"** olarak yapılandırıldığını gösteriyor. Bu durumda GitHub, custom workflow'unuzun deploy'unu **göz ardı eder** ve repo'daki `dist` klasörünü (yanlış path'lerle) yayınlamaya çalışır.
+### 2. ❌ GitHub Pages Ayarları
+- GitHub Pages muhtemelen "Deploy from a branch" modunda
+- "GitHub Actions" moduna geçirilmesi gerekiyor
 
-**Çözüm:** Repo Settings → Pages → Source → **"GitHub Actions"** seçilmeli
+### 3. ❌ `gonder.bat` Betiği
+- `git add .` komutu `dist/` klasörünü de ekliyor
+- `--force` ile push yapılıyor, bu da sorunları gizliyor
 
 ---
 
-### 2. `dist/` Klasörü Repo'ya Commit Edilmiş (KRİTİK)
-`dist/` klasörü repo'da mevcut ve içindeki `index.html` dosyasında asset path'leri **yanlış**:
-```html
-<!-- Mevcut (YANLIŞ) -->
-<script src="/assets/index-CTGXZLsH.js"></script>
+## 🔧 Çözüm Adımları (SIRASIYLA UYGULAYIN)
 
-<!-- Olması gereken (DOĞRU) - base: '/gunes/' olduğu için -->
-<script src="/gunes/assets/index-CTGXZLsH.js"></script>
+### Adım 1: `dist/` Klasörünü Git Takibinden Kaldırın
+Terminalde (proje klasöründe) şu komutları çalıştırın:
+
+```bash
+git rm -r --cached dist
+git add .
+git commit -m "dist klasorunu Git takibinden kaldir"
+git push origin main
 ```
 
-Bu, `dist` klasörünün `base: '/gunes/'` ayarı uygulanmadan oluşturulduğunu gösteriyor.
+### Adım 2: `.gitignore` Dosyasını Kök Dizine Taşıyın
+Eğer kök dizinde `.gitignore` yoksa, proje kök dizininde bir `.gitignore` dosyası oluşturun:
 
-**Çözüm:** `dist/` klasörünü repodan kaldırın, `.gitignore` ekleyin
+```gitignore
+# Dependencies
+node_modules/
 
----
+# Build output
+dist/
 
-### 3. `.gitignore` Dosyası Yok (KRİTİK)
-Projede `.gitignore` dosyası bulunmuyor! Bu şu sorunlara yol açar:
-- `dist/`, `node_modules/` gibi build artifact'leri repoya commit edilebilir
-- GitHub Actions build çıktısı ile repo'daki eski `dist/` çakışabilir
+# Environment files
+.env
+.env.local
+.env.*.local
 
----
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
 
-### 4. `vite.config.ts`'de Duplicate `build` Key (HATA)
-```js
-return {
-  base: '/gunes/',
-  build: {           // ← İlk build tanımı
-    outDir: 'dist',
-    assetsDir: 'assets',
-  },
-  plugins: [...],
-  build: {           // ← İkinci build tanımı (BİRİNCİYİ EZİYOR!)
-    rollupOptions: {...},
-    chunkSizeWarningLimit: 1000,
-  },
-};
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Cache
+.cache/
+.eslintcache
 ```
-JavaScript'de aynı objede iki aynı key olunca ikincisi birincisini ezer. Yani `outDir` ve `assetsDir` ayarları **kayboluyor**.
+
+### Adım 3: GitHub Pages Ayarlarını Değiştirin
+1. Tarayıcıda https://github.com/Ankatec/gunes/settings/pages adresine gidin
+2. **"Build and deployment"** bölümünde **"Source"** kısmını bulun
+3. "Deploy from a branch" seçeneğini **"GitHub Actions"** olarak değiştirin
+4. **Save** butonuna tıklayın
+
+### Adım 4: Yeni `gonder.bat` Dosyasını Kullanın
+`gonder.bat` dosyası güncellenmiştir. Artık `dist/` klasörünü Git'e eklemeyecek ve `--force` kullanmayacak.
+
+### Adım 5: Doğrulama
+1. GitHub Actions sekmesini kontrol edin: https://github.com/Ankatec/gunes/actions
+2. Workflow'un başarıyla tamamlandığını doğrulayın
+3. Siteyi ziyaret edin: https://ankatec.github.io/gunes/
 
 ---
 
-### 5. Sitemap Hostname Yanlış
-```js
-Sitemap({
-  hostname: 'https://atoms.template.com',  // ← YANLIŞ
-})
+## ⚠️ Önemli Notlar
+
+- `dist/` klasörü ASLA repoya push edilmemelidir - GitHub Actions build sırasında otomatik oluşturur
+- `--force` push kullanmayın, bu sorunlara yol açabilir
+- Her push'tan sonra GitHub Actions workflow'unun başarıyla tamamlanıp tamamlanmadığını kontrol edin
+- Eğer `ankatec.github.io` alan adı başka bir yere yönlendirilmişse, bu da soruna neden olabilir
+
+---
+
+## Dosya Yapısı (Olması Gereken)
+
 ```
-Olması gereken: `https://ankatec.github.io/gunes/`
+gunes/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml
+├── src/
+├── public/
+├── .gitignore          ← KÖK DİZİNDE olmalı
+├── index.html
+├── package.json
+├── vite.config.ts
+├── gonder.bat
+└── ... (diğer dosyalar)
+```
 
----
-
-### 6. `gonder.bat` `--force` Push Kullanıyor
-`git push origin main --force` tehlikelidir ve geçmiş commit'leri silebilir.
-
----
-
-## ✅ Düzeltme Planı
-
-1. `.gitignore` dosyası ekle
-2. `vite.config.ts`'deki duplicate `build` key'lerini birleştir
-3. Sitemap hostname'ini düzelt
-4. `dist/` klasörünü git tracking'den kaldır
-5. GitHub Pages kaynağını "GitHub Actions" olarak ayarla
-6. Yeniden build ve push yap
-
-## 📋 GitHub Pages Ayarı (MANUEL)
-Repo → Settings → Pages → Source → **"GitHub Actions"** seçin
-Bu adımı mutlaka yapın, yoksa 404 devam eder!
+**NOT**: `dist/` klasörü bu listede OLMAMALIDIR - GitHub Actions tarafından otomatik oluşturulur.
